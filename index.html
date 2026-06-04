@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="An interactive 3D card gallery — cards tilt toward your cursor with a moving glare, lift in real depth, and flip to reveal a styled back. Pure CSS 3D transforms with a touch of vanilla JS." />
+<meta name="color-scheme" content="dark" />
+<meta property="og:title" content="CSS 3D Card Gallery" />
+<meta property="og:description" content="Cursor-tracked 3D tilt, moving glare, and flip-to-reveal cards. CSS 3D transforms + tiny vanilla JS." />
+<meta property="og:type" content="website" />
+<title>CSS 3D Card Gallery — tilt, glare & flip</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>" />
+<style>
+  :root {
+    --bg-0: #07070d;
+    --bg-1: #0d0d1a;
+    --ink: #f4f5ff;
+    --muted: #9aa0c4;
+    --line: rgba(255, 255, 255, 0.08);
+    --radius: 22px;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --tiltX: 0deg;
+    --tiltY: 0deg;
+    --glare-x: 50%;
+    --glare-y: 50%;
+    --glare-a: 0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; }
+
+  body {
+    min-height: 100vh;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 800px at 12% -10%, rgba(124, 92, 255, 0.22), transparent 55%),
+      radial-gradient(1000px 700px at 110% 10%, rgba(0, 209, 255, 0.16), transparent 50%),
+      radial-gradient(900px 900px at 50% 120%, rgba(255, 92, 168, 0.14), transparent 55%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* subtle dotted texture */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: clamp(48px, 8vw, 96px) clamp(20px, 5vw, 48px) 80px;
+  }
+
+  header { text-align: center; margin-bottom: clamp(44px, 7vw, 76px); }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 7px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(6px);
+  }
+  .eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: linear-gradient(135deg, #7c5cff, #00d1ff);
+    box-shadow: 0 0 12px rgba(124, 92, 255, 0.9);
+  }
+
+  h1 {
+    margin: 22px 0 14px;
+    font-size: clamp(34px, 6.5vw, 64px);
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    background: linear-gradient(120deg, #fff 0%, #cdd2ff 40%, #9ad8ff 70%, #ffb8e6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .sub {
+    max-width: 560px;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: clamp(15px, 2.4vw, 17px);
+    line-height: 1.6;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: clamp(22px, 4vw, 38px);
+  }
+
+  /* ---- Card scene ---- */
+  .scene {
+    perspective: 1100px;
+    perspective-origin: 50% 30%;
+  }
+
+  .card {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    border-radius: var(--radius);
+    transform-style: preserve-3d;
+    transform: rotateX(var(--tiltX)) rotateY(var(--tiltY));
+    transition: transform 0.5s var(--ease);
+    cursor: pointer;
+    will-change: transform;
+  }
+  .scene:hover .card { transition: transform 0.08s linear; }
+
+  /* the flip state lives on the inner so tilt + flip compose cleanly */
+  .flipper {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    transform-style: preserve-3d;
+    transition: transform 0.7s var(--ease);
+  }
+  .card.is-flipped .flipper { transform: rotateY(180deg); }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.4),
+      0 18px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .front {
+    background:
+      radial-gradient(120% 90% at 0% 0%, var(--c1), transparent 60%),
+      radial-gradient(120% 90% at 100% 100%, var(--c2), transparent 60%),
+      linear-gradient(160deg, #15162a, #0c0c18);
+  }
+
+  .back {
+    transform: rotateY(180deg);
+    background:
+      radial-gradient(120% 90% at 100% 0%, var(--c1), transparent 62%),
+      linear-gradient(200deg, #11121f, #08080f);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 26px;
+  }
+
+  /* glossy sheen / glare that tracks the tilt */
+  .glare {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    background: radial-gradient(
+      circle at var(--glare-x) var(--glare-y),
+      rgba(255, 255, 255, 0.55),
+      rgba(255, 255, 255, 0.12) 22%,
+      transparent 55%
+    );
+    mix-blend-mode: soft-light;
+    opacity: var(--glare-a);
+    transition: opacity 0.4s var(--ease);
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* front content lifted in Z for parallax depth */
+  .content {
+    position: absolute;
+    inset: 0;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transform: translateZ(48px);
+    transform-style: preserve-3d;
+  }
+
+  .badge {
+    align-self: flex-start;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.85);
+    padding: 6px 11px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(4px);
+    transform: translateZ(20px);
+  }
+
+  .emoji {
+    font-size: clamp(46px, 9vw, 60px);
+    line-height: 1;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
+    transform: translateZ(38px);
+  }
+
+  .card-title {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.01em;
+    transform: translateZ(28px);
+  }
+  .card-desc {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.72);
+    transform: translateZ(16px);
+  }
+
+  .flip-hint {
+    margin-top: 14px;
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transform: translateZ(12px);
+  }
+  .flip-hint svg { width: 14px; height: 14px; }
+
+  /* back face content */
+  .back-top { display: flex; align-items: center; justify-content: space-between; }
+  .back-label {
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .back-num {
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .back-quote {
+    font-size: clamp(17px, 3.4vw, 21px);
+    line-height: 1.4;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .back-meta { display: flex; gap: 16px; flex-wrap: wrap; }
+  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .stat .v {
+    font-size: 18px; font-weight: 700;
+    background: linear-gradient(120deg, var(--c1), var(--c2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* soft contact shadow under each card */
+  .scene::after {
+    content: "";
+    position: absolute;
+    left: 12%;
+    right: 12%;
+    bottom: -18px;
+    height: 26px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
+    filter: blur(10px);
+    opacity: 0.7;
+    transform: translateZ(-60px);
+    transition: opacity 0.4s var(--ease);
+    z-index: -1;
+  }
+  .scene:hover::after { opacity: 0.95; }
+
+  footer {
+    margin-top: clamp(56px, 9vw, 96px);
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+  footer a {
+    color: #bdc4ff;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(189, 196, 255, 0.3);
+  }
+  footer a:hover { color: #fff; }
+
+  @media (hover: none) {
+    .flip-hint .desktop-only { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .scene:hover .card { transform: none !important; transition: none; }
+    .flipper { transition: none; }
+    .glare { display: none; }
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <span class="eyebrow"><span class="dot"></span> CSS 3D Transforms</span>
+      <h1>3D Card Gallery</h1>
+      <p class="sub">Move your cursor over a card to feel it tilt in real depth, watch the glare slide across the surface, then click to flip and reveal the back.</p>
+    </header>
+
+    <section class="grid" id="grid" aria-label="Interactive 3D cards"></section>
+
+    <footer>
+      Built with pure CSS 3D transforms &amp; a touch of vanilla JS ·
+      <a href="https://github.com/danielt69/css-3d-card-gallery">View source on GitHub</a>
+    </footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    const CARDS = [
+      {
+        emoji: "🪐", badge: "Depth", title: "Parallax Tilt",
+        desc: "Layered content lifts on translateZ so it floats above the surface as the card rotates.",
+        quote: "Real depth, not a drop shadow.",
+        stats: [["Layers", "5"], ["Max tilt", "14°"]],
+        c1: "rgba(124,92,255,0.55)", c2: "rgba(0,209,255,0.45)"
+      },
+      {
+        emoji: "✨", badge: "Light", title: "Moving Glare",
+        desc: "A radial sheen tracks the pointer and the tilt, blended in soft-light for a glossy finish.",
+        quote: "Light that follows your hand.",
+        stats: [["Blend", "soft-light"], ["Track", "pointer"]],
+        c1: "rgba(255,92,168,0.5)", c2: "rgba(255,179,71,0.4)"
+      },
+      {
+        emoji: "🔮", badge: "Motion", title: "Flip Reveal",
+        desc: "Click or tap to rotate the card 180° and expose a fully styled back face. Tilt still composes.",
+        quote: "Two faces, one transform.",
+        stats: [["Rotate", "180°"], ["Faces", "2"]],
+        c1: "rgba(0,209,255,0.5)", c2: "rgba(124,92,255,0.45)"
+      },
+      {
+        emoji: "🌗", badge: "Theme", title: "Layered Gradients",
+        desc: "Stacked radial gradients and a fine grain give each card a deep, premium dark surface.",
+        quote: "Built from light and shadow.",
+        stats: [["Gradients", "3"], ["Grain", "yes"]],
+        c1: "rgba(99,255,179,0.45)", c2: "rgba(0,170,255,0.42)"
+      },
+      {
+        emoji: "🛰️", badge: "Physics", title: "Graceful Settle",
+        desc: "Cards spring back to rest with an expressive easing curve the instant the pointer leaves.",
+        quote: "Every card finds its calm.",
+        stats: [["Ease", "expo-out"], ["Reset", "0.5s"]],
+        c1: "rgba(255,138,76,0.5)", c2: "rgba(255,92,168,0.42)"
+      },
+      {
+        emoji: "♿", badge: "A11y", title: "Reduced Motion",
+        desc: "Respects prefers-reduced-motion, works with keyboard and touch, and degrades cleanly.",
+        quote: "Beautiful and considerate.",
+        stats: [["Keyboard", "yes"], ["Touch", "yes"]],
+        c1: "rgba(180,140,255,0.5)", c2: "rgba(120,200,255,0.42)"
+      }
+    ];
+
+    const flipIcon =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+
+    const grid = document.getElementById("grid");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canTilt = window.matchMedia("(hover: hover) and (pointer: fine)").matches && !reduce;
+    const MAX = 14; // degrees
+
+    CARDS.forEach((data, i) => {
+      const scene = document.createElement("div");
+      scene.className = "scene";
+
+      const card = document.createElement("div");
+      card.className = "card";
+      card.setAttribute("role", "button");
+      card.setAttribute("tabindex", "0");
+      card.setAttribute("aria-label", data.title + " — activate to flip");
+
+      const num = String(i + 1).padStart(2, "0");
+      const statsHTML = data.stats
+        .map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`)
+        .join("");
+
+      card.innerHTML = `
+        <div class="flipper" style="--c1:${data.c1};--c2:${data.c2}">
+          <div class="face front">
+            <div class="glare"></div>
+            <div class="content">
+              <div>
+                <span class="badge">${data.badge}</span>
+              </div>
+              <div>
+                <div class="emoji">${data.emoji}</div>
+                <h2 class="card-title">${data.title}</h2>
+                <p class="card-desc">${data.desc}</p>
+                <span class="flip-hint">${flipIcon}<span class="desktop-only">Click to flip</span><span class="touch-only" hidden>Tap to flip</span></span>
+              </div>
+            </div>
+          </div>
+          <div class="face back">
+            <div class="back-top">
+              <span class="back-label">${data.title}</span>
+              <span class="back-num">${num} / 06</span>
+            </div>
+            <p class="back-quote">${data.quote}</p>
+            <div class="back-meta">${statsHTML}</div>
+            <span class="flip-hint">${flipIcon} Flip back</span>
+          </div>
+        </div>`;
+
+      scene.appendChild(card);
+      grid.appendChild(scene);
+
+      // flip on click / keyboard
+      const toggle = () => card.classList.toggle("is-flipped");
+      card.addEventListener("click", toggle);
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggle();
+        }
+      });
+
+      if (!canTilt) return;
+
+      // pointer-tracked tilt + glare
+      const setVars = (rx, ry, gx, gy, ga) => {
+        card.style.setProperty("--tiltX", rx + "deg");
+        card.style.setProperty("--tiltY", ry + "deg");
+        card.style.setProperty("--glare-x", gx + "%");
+        card.style.setProperty("--glare-y", gy + "%");
+        card.style.setProperty("--glare-a", ga);
+      };
+
+      scene.addEventListener("pointermove", (e) => {
+        const r = card.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width;  // 0..1
+        const py = (e.clientY - r.top) / r.height;  // 0..1
+        const ry = (px - 0.5) * 2 * MAX;            // rotateY follows X
+        const rx = (0.5 - py) * 2 * MAX;            // rotateX follows Y
+        setVars(rx.toFixed(2), ry.toFixed(2), (px * 100).toFixed(1), (py * 100).toFixed(1), 1);
+      });
+
+      scene.addEventListener("pointerleave", () => {
+        setVars(0, 0, 50, 50, 0);
+      });
+    });
+
+    // surface touch hint
+    if (!window.matchMedia("(hover: hover)").matches) {
+      document.querySelectorAll(".desktop-only").forEach((el) => (el.hidden = true));
+      document.querySelectorAll(".touch-only").forEach((el) => (el.hidden = false));
+    }
+  </script>
+</body>
+</html>
