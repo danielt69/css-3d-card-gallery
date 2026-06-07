@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="An interactive 3D card gallery — cards tilt toward your cursor with a moving glare, lift in real depth, and flip to reveal a styled back. Pure CSS 3D transforms with a touch of vanilla JS." />
+<meta name="description" content="Six different CSS 3D card effects — pointer tilt, holographic foil, specular glare, parallax depth, flip reveal, and a cursor spotlight. Each card flips to reveal the exact code that powers it. Pure CSS 3D transforms with a touch of vanilla JS." />
 <meta name="color-scheme" content="dark" />
-<meta property="og:title" content="CSS 3D Card Gallery" />
-<meta property="og:description" content="Cursor-tracked 3D tilt, moving glare, and flip-to-reveal cards. CSS 3D transforms + tiny vanilla JS." />
+<meta property="og:title" content="CSS 3D Card Gallery — 6 effects, each with its code" />
+<meta property="og:description" content="Six distinct CSS 3D effects. Flip any card to read the exact implementation. CSS 3D transforms + tiny vanilla JS." />
 <meta property="og:type" content="website" />
-<title>CSS 3D Card Gallery — tilt, glare & flip</title>
+<title>CSS 3D Card Gallery — six effects, each with its code</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🃏</text></svg>" />
 <style>
   :root {
@@ -19,15 +19,9 @@
     --line: rgba(255, 255, 255, 0.08);
     --radius: 22px;
     --ease: cubic-bezier(0.22, 1, 0.36, 1);
-    --tiltX: 0deg;
-    --tiltY: 0deg;
-    --glare-x: 50%;
-    --glare-y: 50%;
-    --glare-a: 0;
   }
 
   * { box-sizing: border-box; }
-
   html, body { margin: 0; }
 
   body {
@@ -45,7 +39,6 @@
     overflow-x: hidden;
   }
 
-  /* subtle dotted texture */
   body::before {
     content: "";
     position: fixed;
@@ -99,21 +92,23 @@
   }
 
   .sub {
-    max-width: 560px;
+    max-width: 600px;
     margin: 0 auto;
     color: var(--muted);
     font-size: clamp(15px, 2.4vw, 17px);
     line-height: 1.6;
   }
+  .sub b { color: #cdd2ff; font-weight: 600; }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: clamp(22px, 4vw, 38px);
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: clamp(22px, 4vw, 40px);
   }
 
   /* ---- Card scene ---- */
   .scene {
+    position: relative;
     perspective: 1100px;
     perspective-origin: 50% 30%;
   }
@@ -123,14 +118,18 @@
     aspect-ratio: 3 / 4;
     border-radius: var(--radius);
     transform-style: preserve-3d;
-    transform: rotateX(var(--tiltX)) rotateY(var(--tiltY));
     transition: transform 0.5s var(--ease);
-    cursor: pointer;
     will-change: transform;
+    --rx: 0deg; --ry: 0deg;
   }
-  .scene:hover .card { transition: transform 0.08s linear; }
+  /* tilt effects drive rotation from pointer vars */
+  .card[data-fx="tilt"],
+  .card[data-fx="glare"],
+  .card[data-fx="depth"] {
+    transform: rotateX(var(--rx)) rotateY(var(--ry));
+  }
+  .scene.is-live .card { transition: transform 0.09s linear; }
 
-  /* the flip state lives on the inner so tilt + flip compose cleanly */
   .flipper {
     position: absolute;
     inset: 0;
@@ -148,9 +147,7 @@
     -webkit-backface-visibility: hidden;
     overflow: hidden;
     border: 1px solid var(--line);
-    box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.4),
-      0 18px 40px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 18px 40px rgba(0,0,0,0.45);
   }
 
   .front {
@@ -158,35 +155,6 @@
       radial-gradient(120% 90% at 0% 0%, var(--c1), transparent 60%),
       radial-gradient(120% 90% at 100% 100%, var(--c2), transparent 60%),
       linear-gradient(160deg, #15162a, #0c0c18);
-  }
-
-  .back {
-    transform: rotateY(180deg);
-    background:
-      radial-gradient(120% 90% at 100% 0%, var(--c1), transparent 62%),
-      linear-gradient(200deg, #11121f, #08080f);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 26px;
-  }
-
-  /* glossy sheen / glare that tracks the tilt */
-  .glare {
-    position: absolute;
-    inset: 0;
-    border-radius: var(--radius);
-    background: radial-gradient(
-      circle at var(--glare-x) var(--glare-y),
-      rgba(255, 255, 255, 0.55),
-      rgba(255, 255, 255, 0.12) 22%,
-      transparent 55%
-    );
-    mix-blend-mode: soft-light;
-    opacity: var(--glare-a);
-    transition: opacity 0.4s var(--ease);
-    pointer-events: none;
-    z-index: 5;
   }
 
   /* front content lifted in Z for parallax depth */
@@ -197,8 +165,9 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transform: translateZ(48px);
+    transform: translateZ(40px);
     transform-style: preserve-3d;
+    z-index: 6;
   }
 
   .badge {
@@ -206,114 +175,188 @@
     font-size: 11px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.9);
     padding: 6px 11px;
     border-radius: 999px;
     border: 1px solid rgba(255, 255, 255, 0.22);
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(4px);
-    transform: translateZ(20px);
+  }
+  .num {
+    position: absolute; top: 22px; right: 22px;
+    font-size: 12px; font-variant-numeric: tabular-nums;
+    color: rgba(255,255,255,0.45); letter-spacing: 0.1em;
   }
 
   .emoji {
-    font-size: clamp(46px, 9vw, 60px);
+    font-size: clamp(46px, 9vw, 58px);
     line-height: 1;
     filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.45));
-    transform: translateZ(38px);
   }
+  .card[data-fx="depth"] .emoji { transform: translateZ(60px); }
+  .card[data-fx="depth"] .card-title { transform: translateZ(34px); }
+  .card[data-fx="depth"] .card-desc { transform: translateZ(18px); }
 
   .card-title {
-    margin: 0 0 6px;
+    margin: 14px 0 6px;
     font-size: 22px;
     font-weight: 750;
     letter-spacing: -0.01em;
-    transform: translateZ(28px);
   }
   .card-desc {
     margin: 0;
     font-size: 13.5px;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.72);
-    transform: translateZ(16px);
+    color: rgba(255, 255, 255, 0.74);
   }
 
   .flip-hint {
-    margin-top: 14px;
+    margin-top: 16px;
     font-size: 11.5px;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.62);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    transform: translateZ(12px);
+    gap: 7px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.05);
+    cursor: pointer;
+    align-self: flex-start;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
   }
+  .flip-hint:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
   .flip-hint svg { width: 14px; height: 14px; }
 
-  /* back face content */
-  .back-top { display: flex; align-items: center; justify-content: space-between; }
-  .back-label {
-    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
-    color: var(--muted);
-  }
-  .back-num {
-    font-size: 13px; font-variant-numeric: tabular-nums;
-    color: rgba(255, 255, 255, 0.5);
-  }
-  .back-quote {
-    font-size: clamp(17px, 3.4vw, 21px);
-    line-height: 1.4;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-  .back-meta { display: flex; gap: 16px; flex-wrap: wrap; }
-  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-  .stat .v {
-    font-size: 18px; font-weight: 700;
-    background: linear-gradient(120deg, var(--c1), var(--c2));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
+  /* ===== Effect-specific front layers ===== */
+
+  /* glare: specular highlight tracking the pointer */
+  .glare {
+    position: absolute; inset: 0; border-radius: var(--radius);
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%),
+      rgba(255,255,255,0.55), rgba(255,255,255,0.12) 22%, transparent 55%);
+    mix-blend-mode: soft-light;
+    opacity: var(--ga, 0);
+    transition: opacity 0.4s var(--ease);
+    pointer-events: none; z-index: 5;
   }
 
-  /* soft contact shadow under each card */
-  .scene::after {
-    content: "";
-    position: absolute;
-    left: 12%;
-    right: 12%;
-    bottom: -18px;
-    height: 26px;
-    border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55), transparent 70%);
-    filter: blur(10px);
-    opacity: 0.7;
-    transform: translateZ(-60px);
-    transition: opacity 0.4s var(--ease);
-    z-index: -1;
+  /* holo: rainbow foil that shifts with the pointer */
+  .foil {
+    position: absolute; inset: 0; border-radius: var(--radius);
+    background: repeating-linear-gradient(115deg,
+      #ff2d55, #ff9500, #ffe000, #34c759, #00c7ff, #5e5ce6, #ff2d55 100%);
+    background-size: 300% 300%;
+    background-position: var(--mx, 50%) var(--my, 50%);
+    mix-blend-mode: color-dodge;
+    opacity: var(--fa, 0.32);
+    filter: saturate(1.4);
+    transition: opacity 0.3s var(--ease);
+    pointer-events: none; z-index: 4;
   }
-  .scene:hover::after { opacity: 0.95; }
+  .foil::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%),
+      rgba(255,255,255,0.7), transparent 35%);
+    mix-blend-mode: overlay;
+  }
+  .card[data-fx="holo"] .front {
+    background: linear-gradient(160deg, #1a1330, #0b0b16);
+  }
+
+  /* glow: cursor spotlight + animated gradient ring */
+  .spotlight {
+    position: absolute; inset: 0; border-radius: var(--radius);
+    background: radial-gradient(220px 220px at var(--mx,50%) var(--my,50%),
+      rgba(255,196,84,0.4), transparent 60%);
+    opacity: var(--sa, 0); transition: opacity 0.3s var(--ease);
+    pointer-events: none; z-index: 3;
+  }
+  .card[data-fx="glow"] .face.front { border: none; }
+  .card[data-fx="glow"] .ring {
+    position: absolute; inset: 0; border-radius: var(--radius); padding: 1.5px;
+    background: conic-gradient(from 0deg, #ff2d8e, #ffb347, #00d1ff, #7c5cff, #ff2d8e);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: spin 6s linear infinite;
+    pointer-events: none; z-index: 7;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== Back face: the implementation code ===== */
+  .back {
+    transform: rotateY(180deg);
+    background: linear-gradient(200deg, #11121f, #08080f);
+    display: flex; flex-direction: column;
+  }
+  .code-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 12px; color: var(--muted);
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  .dots { display: inline-flex; gap: 5px; margin-right: 4px; }
+  .dots i { width: 10px; height: 10px; border-radius: 50%; }
+  .dots i:nth-child(1){ background:#ff5f57; }
+  .dots i:nth-child(2){ background:#febc2e; }
+  .dots i:nth-child(3){ background:#28c840; }
+  .code-file { flex: 1; }
+  .copy-btn {
+    border: 1px solid rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.05);
+    color: var(--muted); font-size: 11px;
+    padding: 4px 9px; border-radius: 7px; cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  pre {
+    margin: 0; flex: 1; overflow: auto;
+    padding: 14px 16px;
+    font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11.5px; line-height: 1.65;
+    color: #cfd3f5; tab-size: 2;
+    -webkit-overflow-scrolling: touch;
+  }
+  pre .c { color: #6b7299; font-style: italic; } /* comment */
+  pre .k { color: #ff8ac4; }                      /* keyword/selector */
+  pre .p { color: #8fd3ff; }                      /* property */
+  pre .v { color: #c8b6ff; }                      /* value */
+  .back-foot {
+    padding: 11px 14px; border-top: 1px solid rgba(255,255,255,0.08);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--muted);
+  }
+  .back-foot .flip-hint { margin: 0; padding: 6px 10px; }
+
+  /* contact shadow */
+  .scene::after {
+    content: ""; position: absolute;
+    left: 12%; right: 12%; bottom: -18px; height: 26px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 70%);
+    filter: blur(10px); opacity: 0.7; z-index: -1;
+    transition: opacity 0.4s var(--ease);
+  }
+  .scene.is-live::after { opacity: 0.95; }
 
   footer {
     margin-top: clamp(56px, 9vw, 96px);
-    text-align: center;
-    color: var(--muted);
-    font-size: 13.5px;
+    text-align: center; color: var(--muted); font-size: 13.5px;
   }
   footer a {
-    color: #bdc4ff;
-    text-decoration: none;
+    color: #bdc4ff; text-decoration: none;
     border-bottom: 1px solid rgba(189, 196, 255, 0.3);
   }
   footer a:hover { color: #fff; }
 
-  @media (hover: none) {
-    .flip-hint .desktop-only { display: none; }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .card,
-    .scene:hover .card { transform: none !important; transition: none; }
+    .card { transform: none !important; transition: none; }
     .flipper { transition: none; }
-    .glare { display: none; }
+    .glare, .spotlight, .ring { display: none; }
+    .foil { opacity: 0.28 !important; }
   }
 </style>
 </head>
@@ -322,10 +365,10 @@
     <header>
       <span class="eyebrow"><span class="dot"></span> CSS 3D Transforms</span>
       <h1>3D Card Gallery</h1>
-      <p class="sub">Move your cursor over a card to feel it tilt in real depth, watch the glare slide across the surface, then click to flip and reveal the back.</p>
+      <p class="sub">Six <b>different</b> 3D effects — not the same card six times. Each one isolates a single technique, and <b>flips to reveal the exact code</b> that powers it. Hover to feel them; click <b>View code</b> to read them.</p>
     </header>
 
-    <section class="grid" id="grid" aria-label="Interactive 3D cards"></section>
+    <section class="grid" id="grid" aria-label="Interactive 3D effect cards"></section>
 
     <footer>
       Built with pure CSS 3D transforms &amp; a touch of vanilla JS ·
@@ -336,58 +379,144 @@
   <script>
     "use strict";
 
+    /* Each card isolates ONE distinct effect, and its back shows the code for it. */
     const CARDS = [
       {
-        emoji: "🪐", badge: "Depth", title: "Parallax Tilt",
-        desc: "Layered content lifts on translateZ so it floats above the surface as the card rotates.",
-        quote: "Real depth, not a drop shadow.",
-        stats: [["Layers", "5"], ["Max tilt", "14°"]],
-        c1: "rgba(124,92,255,0.55)", c2: "rgba(0,209,255,0.45)"
+        fx: "tilt", emoji: "🎯", badge: "Pointer Tilt", title: "Cursor Tilt",
+        desc: "The card rotates on X and Y toward your pointer. No glare, no parallax — just the rotation, so you can see it alone.",
+        c1: "rgba(124,92,255,0.55)", c2: "rgba(0,209,255,0.40)",
+        file: "tilt.css + js",
+        code:
+`/* perspective on the parent, rotate on the card */
+.scene { perspective: 1100px; }
+.card  { transform: rotateX(var(--rx)) rotateY(var(--ry)); }
+
+// map pointer position → rotation
+const r  = card.getBoundingClientRect();
+const px = (e.clientX - r.left) / r.width;   // 0..1
+const py = (e.clientY - r.top)  / r.height;  // 0..1
+card.style.setProperty('--ry', (px-.5)*28 + 'deg');
+card.style.setProperty('--rx', (.5-py)*28 + 'deg');`
       },
       {
-        emoji: "✨", badge: "Light", title: "Moving Glare",
-        desc: "A radial sheen tracks the pointer and the tilt, blended in soft-light for a glossy finish.",
-        quote: "Light that follows your hand.",
-        stats: [["Blend", "soft-light"], ["Track", "pointer"]],
-        c1: "rgba(255,92,168,0.5)", c2: "rgba(255,179,71,0.4)"
+        fx: "holo", emoji: "🌈", badge: "Holographic", title: "Holographic Foil",
+        desc: "A rainbow foil blended with color-dodge. The gradient slides under your pointer like a real holo trading card. Flat on purpose.",
+        c1: "rgba(255,92,168,0.5)", c2: "rgba(120,200,255,0.4)",
+        file: "holo.css",
+        code:
+`/* rainbow foil that moves under the pointer */
+.foil {
+  background: repeating-linear-gradient(115deg,
+    #ff2d55,#ff9500,#ffe000,#34c759,#00c7ff,#5e5ce6,#ff2d55);
+  background-size: 300% 300%;
+  background-position: var(--mx) var(--my);
+  mix-blend-mode: color-dodge;   /* the holo glow */
+  filter: saturate(1.4);
+}
+/* + a bright sparkle that tracks the cursor */
+.foil::after {
+  background: radial-gradient(circle at var(--mx) var(--my),
+    #fff, transparent 35%);
+  mix-blend-mode: overlay;
+}`
       },
       {
-        emoji: "🔮", badge: "Motion", title: "Flip Reveal",
-        desc: "Click or tap to rotate the card 180° and expose a fully styled back face. Tilt still composes.",
-        quote: "Two faces, one transform.",
-        stats: [["Rotate", "180°"], ["Faces", "2"]],
-        c1: "rgba(0,209,255,0.5)", c2: "rgba(124,92,255,0.45)"
+        fx: "glare", emoji: "✨", badge: "Specular", title: "Glare Sweep",
+        desc: "A soft-light specular highlight rides across the surface following your cursor — the glossy, polished look.",
+        c1: "rgba(0,209,255,0.5)", c2: "rgba(124,92,255,0.4)",
+        file: "glare.css",
+        code:
+`/* specular highlight pinned to the pointer */
+.glare {
+  background: radial-gradient(
+    circle at var(--mx) var(--my),
+    rgba(255,255,255,.55),
+    rgba(255,255,255,.12) 22%,
+    transparent 55%);
+  mix-blend-mode: soft-light;  /* sits on the surface */
+  opacity: var(--ga);          /* fade in on hover */
+}
+// js sets --mx/--my to the pointer %, --ga to 1`
       },
       {
-        emoji: "🌗", badge: "Theme", title: "Layered Gradients",
-        desc: "Stacked radial gradients and a fine grain give each card a deep, premium dark surface.",
-        quote: "Built from light and shadow.",
-        stats: [["Gradients", "3"], ["Grain", "yes"]],
-        c1: "rgba(99,255,179,0.45)", c2: "rgba(0,170,255,0.42)"
+        fx: "depth", emoji: "🪐", badge: "Parallax", title: "Parallax Depth",
+        desc: "Each layer sits at a different translateZ. As the card tilts, the emoji floats far above the text — real depth, not a drop shadow.",
+        c1: "rgba(99,255,179,0.45)", c2: "rgba(0,170,255,0.42)",
+        file: "depth.css",
+        code:
+`/* layers separate because they live at different Z */
+.card    { transform-style: preserve-3d; }
+.content { transform-style: preserve-3d; }
+
+.emoji      { transform: translateZ(60px); } /* nearest */
+.card-title { transform: translateZ(34px); }
+.card-desc  { transform: translateZ(18px); } /* farthest */
+
+/* tilt the parent and the gap between layers
+   becomes visible parallax */`
       },
       {
-        emoji: "🛰️", badge: "Physics", title: "Graceful Settle",
-        desc: "Cards spring back to rest with an expressive easing curve the instant the pointer leaves.",
-        quote: "Every card finds its calm.",
-        stats: [["Ease", "expo-out"], ["Reset", "0.5s"]],
-        c1: "rgba(255,138,76,0.5)", c2: "rgba(255,92,168,0.42)"
+        fx: "flip", emoji: "🔄", badge: "Flip", title: "Flip Reveal",
+        desc: "A 180° rotateY swaps front for back. Two faces share one transform; backface-visibility hides whichever points away.",
+        c1: "rgba(255,138,76,0.5)", c2: "rgba(255,92,168,0.42)",
+        file: "flip.css",
+        code:
+`/* two faces, one rotation */
+.flipper { transform-style: preserve-3d; transition: .7s; }
+.card.is-flipped .flipper { transform: rotateY(180deg); }
+
+.face { backface-visibility: hidden; }  /* hide the back */
+.back { transform: rotateY(180deg); }   /* pre-flip it */
+
+// toggle on click / Enter / Space
+card.addEventListener('click', () =>
+  card.classList.toggle('is-flipped'));`
       },
       {
-        emoji: "♿", badge: "A11y", title: "Reduced Motion",
-        desc: "Respects prefers-reduced-motion, works with keyboard and touch, and degrades cleanly.",
-        quote: "Beautiful and considerate.",
-        stats: [["Keyboard", "yes"], ["Touch", "yes"]],
-        c1: "rgba(180,140,255,0.5)", c2: "rgba(120,200,255,0.42)"
+        fx: "glow", emoji: "💡", badge: "Spotlight", title: "Cursor Spotlight",
+        desc: "A radial spotlight follows your pointer while a conic-gradient ring spins around the border. No tilt — pure light.",
+        c1: "rgba(255,196,84,0.5)", c2: "rgba(255,45,142,0.42)",
+        file: "glow.css",
+        code:
+`/* spotlight follows the cursor */
+.spotlight {
+  background: radial-gradient(220px at var(--mx) var(--my),
+    rgba(255,196,84,.4), transparent 60%);
+  opacity: var(--sa);
+}
+/* glowing gradient border via mask trick */
+.ring {
+  padding: 1.5px;
+  background: conic-gradient(#ff2d8e,#ffb347,#00d1ff,#7c5cff,#ff2d8e);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  animation: spin 6s linear infinite;
+}`
       }
     ];
 
     const flipIcon =
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
 
+    const codeIcon =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+
+    // very small, safe syntax tinting for the code blocks
+    function highlight(src) {
+      const esc = src.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return esc
+        .replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g, '<span class="c">$1</span>')
+        .replace(/(^|\n)([.#][\w-]+(?:\s*[.#:][\w-]+)*)(\s*\{)/g, '$1<span class="k">$2</span>$3')
+        .replace(/([\w-]+)(\s*:\s*)([^;\n]+)(;)/g, '<span class="p">$1</span>$2<span class="v">$3</span>$4');
+    }
+
     const grid = document.getElementById("grid");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const canTilt = window.matchMedia("(hover: hover) and (pointer: fine)").matches && !reduce;
-    const MAX = 14; // degrees
+    const fineHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    const canLive = fineHover && !reduce;
+    const MAX = 14;
 
     CARDS.forEach((data, i) => {
       const scene = document.createElement("div");
@@ -395,85 +524,104 @@
 
       const card = document.createElement("div");
       card.className = "card";
+      card.dataset.fx = data.fx;
       card.setAttribute("role", "button");
       card.setAttribute("tabindex", "0");
-      card.setAttribute("aria-label", data.title + " — activate to flip");
+      card.setAttribute("aria-label", data.title + " — activate to view the code");
 
       const num = String(i + 1).padStart(2, "0");
-      const statsHTML = data.stats
-        .map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`)
-        .join("");
+      const hintLabel = (fineHover ? "View" : "Tap for") + " code";
+
+      const extra =
+        data.fx === "glare" ? '<div class="glare"></div>' :
+        data.fx === "holo"  ? '<div class="foil"></div>' :
+        data.fx === "glow"  ? '<div class="spotlight"></div><div class="ring"></div>' : "";
 
       card.innerHTML = `
         <div class="flipper" style="--c1:${data.c1};--c2:${data.c2}">
           <div class="face front">
-            <div class="glare"></div>
+            ${extra}
+            <span class="num">${num} / 06</span>
             <div class="content">
-              <div>
-                <span class="badge">${data.badge}</span>
-              </div>
+              <span class="badge">${data.badge}</span>
               <div>
                 <div class="emoji">${data.emoji}</div>
                 <h2 class="card-title">${data.title}</h2>
                 <p class="card-desc">${data.desc}</p>
-                <span class="flip-hint">${flipIcon}<span class="desktop-only">Click to flip</span><span class="touch-only" hidden>Tap to flip</span></span>
+                <button class="flip-hint" type="button" data-flip>${codeIcon}${hintLabel}</button>
               </div>
             </div>
           </div>
           <div class="face back">
-            <div class="back-top">
-              <span class="back-label">${data.title}</span>
-              <span class="back-num">${num} / 06</span>
+            <div class="code-head">
+              <span class="dots"><i></i><i></i><i></i></span>
+              <span class="code-file">${data.file}</span>
+              <button class="copy-btn" type="button" data-copy>Copy</button>
             </div>
-            <p class="back-quote">${data.quote}</p>
-            <div class="back-meta">${statsHTML}</div>
-            <span class="flip-hint">${flipIcon} Flip back</span>
+            <pre><code>${highlight(data.code)}</code></pre>
+            <div class="back-foot">
+              <span>${data.title}</span>
+              <button class="flip-hint" type="button" data-flip>${flipIcon}Back</button>
+            </div>
           </div>
         </div>`;
 
       scene.appendChild(card);
       grid.appendChild(scene);
 
-      // flip on click / keyboard
-      const toggle = () => card.classList.toggle("is-flipped");
-      card.addEventListener("click", toggle);
+      // flip handlers — buttons flip; clicking the card body also flips,
+      // but not when selecting code text or using the copy button.
+      const flip = () => card.classList.toggle("is-flipped");
+      card.querySelectorAll("[data-flip]").forEach((b) =>
+        b.addEventListener("click", (e) => { e.stopPropagation(); flip(); }));
+      card.addEventListener("click", (e) => {
+        if (e.target.closest("[data-copy]") || e.target.closest("pre")) return;
+        flip();
+      });
       card.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggle();
-        }
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); }
       });
 
-      if (!canTilt) return;
+      // copy code
+      const copyBtn = card.querySelector("[data-copy]");
+      copyBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(data.code);
+          copyBtn.textContent = "Copied";
+          setTimeout(() => (copyBtn.textContent = "Copy"), 1400);
+        } catch { copyBtn.textContent = "⌘C"; }
+      });
 
-      // pointer-tracked tilt + glare
-      const setVars = (rx, ry, gx, gy, ga) => {
-        card.style.setProperty("--tiltX", rx + "deg");
-        card.style.setProperty("--tiltY", ry + "deg");
-        card.style.setProperty("--glare-x", gx + "%");
-        card.style.setProperty("--glare-y", gy + "%");
-        card.style.setProperty("--glare-a", ga);
-      };
+      if (!canLive) return;
 
+      // pointer-driven vars; each effect reads what it needs
+      scene.addEventListener("pointerenter", () => scene.classList.add("is-live"));
       scene.addEventListener("pointermove", (e) => {
         const r = card.getBoundingClientRect();
-        const px = (e.clientX - r.left) / r.width;  // 0..1
-        const py = (e.clientY - r.top) / r.height;  // 0..1
-        const ry = (px - 0.5) * 2 * MAX;            // rotateY follows X
-        const rx = (0.5 - py) * 2 * MAX;            // rotateX follows Y
-        setVars(rx.toFixed(2), ry.toFixed(2), (px * 100).toFixed(1), (py * 100).toFixed(1), 1);
+        const px = (e.clientX - r.left) / r.width;
+        const py = (e.clientY - r.top) / r.height;
+        const fl = card.querySelector(".flipper");
+        card.style.setProperty("--mx", (px * 100).toFixed(1) + "%");
+        card.style.setProperty("--my", (py * 100).toFixed(1) + "%");
+        fl.style.setProperty("--ga", "1");
+        fl.style.setProperty("--sa", "1");
+        if (data.fx === "tilt" || data.fx === "glare" || data.fx === "depth") {
+          card.style.setProperty("--ry", ((px - 0.5) * 2 * MAX).toFixed(2) + "deg");
+          card.style.setProperty("--rx", ((0.5 - py) * 2 * MAX).toFixed(2) + "deg");
+        }
       });
-
       scene.addEventListener("pointerleave", () => {
-        setVars(0, 0, 50, 50, 0);
+        scene.classList.remove("is-live");
+        const fl = card.querySelector(".flipper");
+        card.style.setProperty("--rx", "0deg");
+        card.style.setProperty("--ry", "0deg");
+        card.style.setProperty("--mx", "50%");
+        card.style.setProperty("--my", "50%");
+        fl.style.setProperty("--ga", "0");
+        fl.style.setProperty("--sa", "0");
       });
     });
-
-    // surface touch hint
-    if (!window.matchMedia("(hover: hover)").matches) {
-      document.querySelectorAll(".desktop-only").forEach((el) => (el.hidden = true));
-      document.querySelectorAll(".touch-only").forEach((el) => (el.hidden = false));
-    }
   </script>
 </body>
 </html>
